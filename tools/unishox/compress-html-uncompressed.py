@@ -50,10 +50,8 @@ def extract_c_string(s: str) -> str:
 
 path_compressed   = path.join('..','..','tasmota','html_compat_js','compressed')
 path_uncompressed = path.join('..','..','tasmota','html_compat_js','uncompressed')
-#path_compressed   = path.join('..','..','tasmota','html','compressed')
-#path_uncompressed = path.join('..','..','tasmota','html','uncompressed')
-#path_compressed   = path.join('..','..','tasmota','html_compressed')
-#path_uncompressed = path.join('..','..','tasmota','html_uncompressed')
+# path_compressed   = path.join('..','..','tasmota','html','compressed')
+# path_uncompressed = path.join('..','..','tasmota','html','uncompressed')
 
 files = listdir(path_uncompressed)
 
