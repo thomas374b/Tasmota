@@ -214,6 +214,7 @@ enum UserSelectablePins {
   GPIO_HDMI_CEC,                        // Support for HDMI CEC
   GPIO_HC8_RXD,                         // HC8 Serial interface
   GPIO_I2S_DAC,                         // Audio DAC support for ESP32 and ESP32S2
+  GPIO_VFDM_TX,						    // Serial Display Transceive Pin
   GPIO_SENSOR_END };
 
 // Error as warning to rethink GPIO usage with max 2045
@@ -475,6 +476,7 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_HDMI_CEC "|"
   D_SENSOR_HC8_RX "|"
   D_SENSOR_I2S_DAC "|"
+  D_GPIO_VFDM_TX "|"
   ;
 
 const char kSensorNamesFixed[] PROGMEM =
@@ -631,6 +633,11 @@ const uint16_t kGpioNiceList[] PROGMEM = {
   AGPIO(GPIO_SSPI_DC),                  // Software SPI Data or Command
 
 #if defined(USE_DISPLAY) || defined(USE_LVGL)
+
+#ifdef USE_DISPLAY_VFDM
+  AGPIO(GPIO_VFDM_TX),
+#endif
+
 #ifdef USE_DISPLAY_ILI9341
   AGPIO(GPIO_ILI9341_CS),
   AGPIO(GPIO_ILI9341_DC),
