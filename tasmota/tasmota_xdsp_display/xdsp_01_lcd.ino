@@ -55,8 +55,8 @@ void LcdInit(uint8_t mode)
   }
 }
 
-void LcdInitDriver(void) {
-  if (!TasmotaGlobal.i2c_enabled) { return; }
+bool LcdInitDriver(void) {
+  if (!TasmotaGlobal.i2c_enabled) { return false; }
 
   if (!Settings->display_model) {
     if (I2cSetDevice(LCD_ADDRESS1)) {
@@ -67,9 +67,19 @@ void LcdInitDriver(void) {
       Settings->display_address[0] = LCD_ADDRESS2;
       Settings->display_model = XDSP_01;
     }
+    else
+      AddLog(LOG_LEVEL_DEBUG, PSTR("DSP: no display found on addresses [0x%02x,0x%02x]"), LCD_ADDRESS1, LCD_ADDRESS2);
   }
 
   if (XDSP_01 == Settings->display_model) {
+    if ((Settings->display_address[0] > 127) || (Settings->display_address[0] == 0)) {
+    	AddLog(LOG_LEVEL_DEBUG, PSTR("DSP: wrong display address [0x%02x]"), Settings->display_address[0]);
+    	goto exitError;
+    }
+    if (!I2cSetDevice(Settings->display_address[0])) {
+    	AddLog(LOG_LEVEL_DEBUG, PSTR("DSP: no display device @ address [0x%02x]"), Settings->display_address[0]);
+    	goto exitError;
+    }
     I2cSetActiveFound(Settings->display_address[0], "LCD");
 
     Settings->display_width = Settings->display_cols[0];
@@ -84,6 +94,10 @@ void LcdInitDriver(void) {
 
     AddLog(LOG_LEVEL_INFO, PSTR("DSP: LCD"));
   }
+  return (XDSP_01 == Settings->display_model);
+exitError:
+  Settings->display_model = 0;
+  return false;
 }
 
 void LcdDrawStringAt(void)
@@ -199,12 +213,14 @@ void LcdRefresh(void)  // Every second
 
 bool Xdsp01(uint32_t function)
 {
+  AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_DEBUG "call Xdsp01(0x%08x)"), function);
+
   if (!I2cEnabled(XI2C_03)) { return false; }
 
   bool result = false;
 
   if (FUNC_DISPLAY_INIT_DRIVER == function) {
-    LcdInitDriver();
+    result = LcdInitDriver();
   }
   else if (XDSP_01 == Settings->display_model) {
     switch (function) {
