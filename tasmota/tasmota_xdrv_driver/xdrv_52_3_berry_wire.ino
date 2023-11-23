@@ -37,7 +37,7 @@ TwoWire & getWire(bvm *vm) {
   } else if (2 == bus && TasmotaGlobal.i2c_enabled_2) {
     return Wire1;
   } else {
-    be_raise(vm, "configuration_error", "I2C bus not initiliazedd");
+    be_raise(vm, "configuration_error", "I2C bus not initialized");
     return *(TwoWire*)nullptr;
   }
 }
