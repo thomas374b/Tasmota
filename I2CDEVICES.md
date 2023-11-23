@@ -123,4 +123,6 @@ Index | Define              | Driver   | Device   | Address(es) | Description
   84  | USE_ENS16x          | xsns_111 | ENS16x   | 0x52 - 0x53 | Gas (TVOC, eCO2) and air quality sensor
   85  | USE_ENS210          | xsns_112 | ENS210   | 0x43 - 0x44 | Temperature and humidity sensor
   86  | USE_PCA9555         | xdrv_71  | PCA9555  | 0x20 - 0x26 | 16bit I2C GPIO Expander
+  86  | USE_TIANMA_LCD      | xdrv_71  | PCA9555  | 0x20        | Tianma 16x2 I2C Display + 4 Buttons on pca9555 16bit I2C GPIO Expander
+  
   

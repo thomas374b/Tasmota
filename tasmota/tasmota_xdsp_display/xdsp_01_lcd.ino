@@ -24,11 +24,19 @@
 #define XDSP_01                1
 #define XI2C_03                3            // See I2CDEVICES.md
 
-#define LCD_ADDRESS1           0x27         // LCD I2C address option 1
-#define LCD_ADDRESS2           0x3F         // LCD I2C address option 2
-
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+
+#define LCD_ADDRESS1           0x27         // LCD I2C address option 1
+#ifdef USE_TIANMA_LCD_ON_PCA9555
+	#if !defined(USE_LCD_PORT_BIT_MANGLING) || !defined(USE_PCA9555_LCD_ADDR)
+		#warning "you need a patched version of LiquidCrystal_I2C.h in order to support the TIANMA 16x2 LCD Display"
+	#else
+		#undef LCD_ADDRESS1
+    	#define LCD_ADDRESS1       USE_PCA9555_LCD_ADDR
+	#endif
+#endif
+#define LCD_ADDRESS2           0x3F         // LCD I2C address option 2
 
 LiquidCrystal_I2C *lcd;
 
@@ -55,15 +63,38 @@ void LcdInit(uint8_t mode)
   }
 }
 
+#if defined(USE_TIANMA_LCD_ON_PCA9555) && defined(USE_PCA9555_LCD) && defined(USE_PCA9555)
+// circumvent allocated I2C slave ID for buttons and display
+bool myI2cSetDevice(uint32_t addr, uint8_t bus = 0)
+{
+	bool alreadyActive = false;
+	if (addr == USE_PCA9555_LCD_ADDR) { // TODO: check also if driver is PCA9555
+		alreadyActive = I2cActive(addr, bus);
+		if (alreadyActive) {
+			I2cResetActive(addr, bus);
+		}
+	}
+	bool result = I2cSetDevice(addr, bus);
+	if (addr == USE_PCA9555_LCD_ADDR) {	// TODO: check also if driver is PCA9555
+		if (alreadyActive) {
+			I2cSetActive(addr, bus);
+		}
+	}
+	return result;
+}
+#else
+	#define myI2cSetDevice(x)		I2cSetDevice(x)
+#endif
+
 bool LcdInitDriver(void) {
   if (!TasmotaGlobal.i2c_enabled) { return false; }
 
   if (!Settings->display_model) {
-    if (I2cSetDevice(LCD_ADDRESS1)) {
+    if (myI2cSetDevice(LCD_ADDRESS1)) {
       Settings->display_address[0] = LCD_ADDRESS1;
       Settings->display_model = XDSP_01;
     }
-    else if (I2cSetDevice(LCD_ADDRESS2)) {
+    else if (myI2cSetDevice(LCD_ADDRESS2)) {
       Settings->display_address[0] = LCD_ADDRESS2;
       Settings->display_model = XDSP_01;
     }
@@ -76,7 +107,7 @@ bool LcdInitDriver(void) {
     	AddLog(LOG_LEVEL_DEBUG, PSTR("DSP: wrong display address [0x%02x]"), Settings->display_address[0]);
     	goto exitError;
     }
-    if (!I2cSetDevice(Settings->display_address[0])) {
+    if (!myI2cSetDevice(Settings->display_address[0])) {
     	AddLog(LOG_LEVEL_DEBUG, PSTR("DSP: no display device @ address [0x%02x]"), Settings->display_address[0]);
     	goto exitError;
     }
@@ -213,7 +244,7 @@ void LcdRefresh(void)  // Every second
 
 bool Xdsp01(uint32_t function)
 {
-  AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_DEBUG "call Xdsp01(0x%08x)"), function);
+//  AddLog(LOG_LEVEL_DEBUG_MORE, PSTR(D_LOG_DEBUG "call Xdsp01(0x%08x)"), function);
 
   if (!I2cEnabled(XI2C_03)) { return false; }
 

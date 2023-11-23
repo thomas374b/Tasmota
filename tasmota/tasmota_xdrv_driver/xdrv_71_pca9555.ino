@@ -8,6 +8,19 @@
 
 
 #ifdef USE_I2C
+	#ifdef USE_TIANMA_LCD_ON_PCA9555
+// this driver is only to be used with TIANMA 16x2 I2C-Display and 4 buttons
+// you have to use
+//  	{"NAME":"PCA9555","GPIO":[128,129,130,131]}
+// in /PCA9555.dat  to get the buttons working, i.e. the buttons are inverted
+//    button sequence is
+//		<X> <down> <up> <Enter>
+// the GPIO port is restricted to use only INPUT on the the lower 4 bits
+// other configuring options are not allowed
+	#ifndef USE_PCA9555
+		#define USE_PCA9555
+	#endif
+#endif
 #if defined(USE_PCA9555)
 /*********************************************************************************************\
  * 16-bit PCA9555 I2C GPIO Expander
@@ -57,8 +70,13 @@
 #define XI2C_86                  86     // See I2CDEVICES.md
 
 #define PCA9555_ADDR_START       0x20   // 32
+#ifdef USE_TIANMA_LCD_ON_PCA9555	// address is fixed by PCB layout on that specific device
+	#define PCA9555_ADDR_END         0x21
+	#define PCA9555_MAX_DEVICES      1
+#else
 #define PCA9555_ADDR_END         0x27  	// 0x27 is reserved for other displays
 #define PCA9555_MAX_DEVICES      7
+#endif
 
 /*********************************************************************************************\
  * PCA9555 support
@@ -85,6 +103,7 @@ typedef struct {
 
 struct PCA9555 {
   tPCA9555Device device[PCA9555_MAX_DEVICES];
+#ifndef USE_TIANMA_LCD_ON_PCA9555
   uint32_t relay_inverted;
   uint8_t relay_max;
   uint8_t relay_offset;
@@ -92,6 +111,7 @@ struct PCA9555 {
   uint8_t switch_max;
   int8_t switch_offset;
 
+#endif
   uint32_t button_inverted;
   uint8_t button_max;
   int8_t button_offset;
@@ -313,11 +333,20 @@ bool PCA9555LoadTemplate(void) {
       if (!val) { break; }
       uint16_t mpin = val.getUInt();
       if (mpin) {                                      // Above GPIO_NONE
+#ifndef USE_TIANMA_LCD_ON_PCA9555
         if ((mpin >= AGPIO(GPIO_SWT1_NP)) && (mpin < (AGPIO(GPIO_SWT1_NP) + MAX_SWITCHES_SET))) {
           mpin -= (AGPIO(GPIO_SWT1_NP) - AGPIO(GPIO_SWT1));
           PCA9555.switch_max++;
           PCA9555SetPinModes(pin, INPUT);
         } else
+#else
+        if (pin > 3) {
+        	AddLog(LOG_LEVEL_DEBUG, PSTR("PCA: only 4 button inputs allowed with Tianma 16x2 display"), PCA9555.base);
+        	mpin = 0;
+        	PCA9555_gpio_pin[pin] = mpin;
+        	break;
+        }
+#endif
         if ((mpin >= AGPIO(GPIO_KEY1_NP)) && (mpin < (AGPIO(GPIO_KEY1_NP) + MAX_KEYS_SET))) {
           mpin -= (AGPIO(GPIO_KEY1_NP) - AGPIO(GPIO_KEY1));
           PCA9555.button_max++;
@@ -329,6 +358,7 @@ bool PCA9555LoadTemplate(void) {
           PCA9555.button_max++;
           PCA9555SetPinModes(pin, INPUT);
         }
+#ifndef USE_TIANMA_LCD_ON_PCA9555
         else if ((mpin >= AGPIO(GPIO_REL1)) && (mpin < (AGPIO(GPIO_REL1) + MAX_RELAYS_SET))) {
           PCA9555.relay_max++;
           PCA9555PinMode(pin, OUTPUT);
@@ -347,15 +377,18 @@ bool PCA9555LoadTemplate(void) {
           PCA9555PinMode(pin, OUTPUT);
           PCA9555DigitalWrite(pin, 0);
         }
+#endif
         else { mpin = 0; }
         PCA9555_gpio_pin[pin] = mpin;
       }
+#ifndef USE_TIANMA_LCD_ON_PCA9555
       if ((PCA9555.switch_max >= MAX_SWITCHES_SET) ||
           (PCA9555.button_max >= MAX_KEYS_SET) ||
           (PCA9555.relay_max >= MAX_RELAYS_SET)) {
         AddLog(LOG_LEVEL_INFO, PSTR("PCA: Max reached (S%d/B%d/R%d)"), PCA9555.switch_max, PCA9555.button_max, PCA9555.relay_max);
         break;
       }
+#endif
     }
     PCA9555.max_pins = pin;                             // Max number of configured pins
   }
@@ -434,11 +467,11 @@ void PCA9555ModuleInit(void) {
     PCA9555.max_devices = 0;
     return;
   }
-
+#ifndef USE_TIANMA_LCD_ON_PCA9555
   PCA9555.relay_offset = TasmotaGlobal.devices_present;
   PCA9555.relay_max -= UpdateDevicesPresent(PCA9555.relay_max);
   PCA9555.switch_offset = -1;
-
+#endif
   PCA9555.button_offset = -1;
 }
 
@@ -450,6 +483,10 @@ void PCA9555ServiceInput(void) {
   uint32_t gpio;
   for (PCA9555.chip = 0; PCA9555.chip < PCA9555.max_devices; PCA9555.chip++) {
 	gpio = 0;
+#ifndef USE_TIANMA_LCD_ON_PCA9555
+	gpio = PCA9555Read(PCA9555_in8_15);        	// Read PCA9555 gpio
+	gpio <<= 8;
+#endif
 	gpio |= PCA9555Read(PCA9555_in0_7);         // Read PCA9555 gpio
 
 //    AddLog(LOG_LEVEL_DEBUG_MORE, PSTR("PCA: Chip %d, State %02X"), PCA9555.chip, gpio);
@@ -463,9 +500,11 @@ void PCA9555ServiceInput(void) {
       if (GPIO_KEY1 == lpin) {
         ButtonSetVirtualPinState(PCA9555.button_offset + index, (state != bitRead(PCA9555.button_inverted, index)));
       }
+#ifndef USE_TIANMA_LCD_ON_PCA9555
       else if (GPIO_SWT1 == lpin) {
         SwitchSetVirtualPinState(PCA9555.switch_offset + index, state);
       }
+#endif
       mask <<= 1;
     }
     pin_offset += PCA9555.device[PCA9555.chip].pins;
@@ -477,6 +516,7 @@ void PCA9555Init(void) {
   PCA9555Write(PCA9555_pol8_15, 0b00000000);
 }
 
+#ifndef USE_TIANMA_LCD_ON_PCA9555
 void PCA9555Power(void) {
   // XdrvMailbox.index = 32-bit rpower bit mask
   // Use absolute relay indexes unique with main template
@@ -496,6 +536,7 @@ void PCA9555Power(void) {
     rpower >>= 1;                                      // Select next power
   }
 }
+#endif
 
 bool PCA9555AddButton(void) {
   // XdrvMailbox.index = button/switch index
@@ -514,6 +555,7 @@ bool PCA9555AddButton(void) {
   return true;
 }
 
+#ifndef USE_TIANMA_LCD_ON_PCA9555
 bool PCA9555AddSwitch(void) {
   // XdrvMailbox.index = button/switch index
   uint32_t index = XdrvMailbox.index;
@@ -530,6 +572,7 @@ bool PCA9555AddSwitch(void) {
   XdrvMailbox.index = PCA9555DigitalRead(PCA9555Pin(GPIO_SWT1, index));
   return true;
 }
+#endif
 
 /*********************************************************************************************\
  * Interface
@@ -553,7 +596,9 @@ bool Xdrv71(uint32_t function) {
         break;
 
       case FUNC_SET_POWER:
+#ifndef USE_TIANMA_LCD_ON_PCA9555
         PCA9555Power();
+#endif
         break;
 
       case FUNC_INIT:
@@ -565,7 +610,9 @@ bool Xdrv71(uint32_t function) {
         break;
 
       case FUNC_ADD_SWITCH:
+#ifndef USE_TIANMA_LCD_ON_PCA9555
         result = PCA9555AddSwitch();
+#endif
         break;
     }
   }

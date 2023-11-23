@@ -2,11 +2,85 @@
 
 #include "LiquidCrystal_I2C.h"
 #include <inttypes.h>
+
+// assertion for non standard wiring and bit mangling
+#if (!defined(LCD_I2C_PIN_RS) || !defined(LCD_I2C_PIN_RW) || !defined(LCD_I2C_PIN_EN) ||\
+    !defined(LCD_I2C_PIN_D4) || !defined(LCD_I2C_PIN_D5) || !defined(LCD_I2C_PIN_D6)|| !defined(LCD_I2C_PIN_D7))
+    // some pin definition is missing
+    #ifdef USE_LCD_PORT_BIT_MANGLING
+    	#undef USE_LCD_PORT_BIT_MANGLING
+    	#warning "USE_LCD_PORT_BIT_MANGLING was disabled due to missing pin definition"
+    #endif
+#else
+   // all are defined
+   #if ((LCD_I2C_PIN_RS != 0) || (LCD_I2C_PIN_RW != 1)  || (LCD_I2C_PIN_EN != 2) \
+       || (LCD_I2C_PIN_D4 != 4)  || (LCD_I2C_PIN_D5 != 5)  || (LCD_I2C_PIN_D6 != 6)  || (LCD_I2C_PIN_D7 != 7))
+       // any one is different
+	#ifndef USE_LCD_PORT_BIT_MANGLING
+		#define USE_LCD_PORT_BIT_MANGLING	
+		
+		#ifdef USE_TIANMA_LCD_ON_PCA9555	
+			// this is OK by intention
+			#define 	USE_PCA9555_LCD_ADDR 	0x20
+		#else
+			#warning "bit mangling enabled since @ least one pin definition is different to the standard"
+		#endif
+	#endif    
+   #else
+   	// all pins are standard (TODO: backlight pin is not checked)
+   	#ifdef USE_LCD_PORT_BIT_MANGLING
+		#undef USE_LCD_PORT_BIT_MANGLING
+		#warning "you defined USE_LCD_PORT_BIT_MANGLING but all pins are standard, #undef'ed"		
+	#endif    
+   #endif 
+#endif	// assert missing pin definition
+
+#ifdef USE_LCD_PORT_BIT_MANGLING
+// standard sequence is RS, RW, ENA, spare/backlight, D4, D5, D6, D7
+// lookup array for fast and generic bit mangling
+static const uint8_t LCD_I2C_BITMASK[8] = {
+		 _BV(LCD_I2C_PIN_RS)  			// RS
+		,_BV(LCD_I2C_PIN_RW)			// RW
+		,_BV(LCD_I2C_PIN_EN)			// ENA
+#ifdef LCD_I2C_HAS_BACKLIGHT
+		,_BV(LCD_I2C_PIN_BACKLIGHT)		// backlight
+#else
+		, 0					// spare (or maybe buzzer?)
+#endif
+		,_BV(LCD_I2C_PIN_D4)			// D4
+		,_BV(LCD_I2C_PIN_D5)			// D5
+		,_BV(LCD_I2C_PIN_D6)			// D6
+		,_BV(LCD_I2C_PIN_D7)			// D7
+};
+
+__attribute__((always_inline))
+inline uint8_t lcdBitMapping(uint8_t args)
+{
+	uint8_t mask = 1;
+	uint8_t data = 0;
+	uint8_t i = 0;
+
+	do {
+		if ((args & mask) > 0) {
+			data |= LCD_I2C_BITMASK[i];
+}
+		i++;
+		mask <<= 1;
+	} while (i < 8);
+	
+	return data;
+}
+#else
+	#define		lcdBitMapping(x)			(x)
+#endif // !USE_LCD_PORT_BIT_MANGLING
+
+
 #if defined(ARDUINO) && ARDUINO >= 100
 
 #include "Arduino.h"
 
-#define printIIC(args)	Wire.write(args)
+#define printIIC(args)	Wire.write(lcdBitMapping(args))
+__attribute__((always_inline))
 inline size_t LiquidCrystal_I2C::write(uint8_t value) {
 	send(value, Rs);
 	return 1;
@@ -15,7 +89,8 @@ inline size_t LiquidCrystal_I2C::write(uint8_t value) {
 #else
 #include "WProgram.h"
 
-#define printIIC(args)	Wire.send(args)
+#define printIIC(args)	Wire.send(lcdBitMapping(args))
+__attribute__((always_inline))
 inline void LiquidCrystal_I2C::write(uint8_t value) {
 	send(value, Rs);
 }
@@ -59,6 +134,19 @@ void LiquidCrystal_I2C::init(){
 void LiquidCrystal_I2C::init_priv()
 {
 	Wire.begin();
+#ifdef USE_TIANMA_LCD_ON_PCA9555
+	uint8_t error;
+
+	Wire.beginTransmission(_Addr);
+	Wire.write((uint8_t)0x07);				// commandbyte, select config register-1
+	Wire.write((uint8_t)0x00);				// set register-1 all pins to output
+	error = Wire.endTransmission();
+
+	if (error != 0) {
+//		_DBG("no LCD init-2\n");
+		return;
+	}
+#endif // USE_TIANMA_LCD_ON_PCA9555	
 	_displayfunction = LCD_4BITMODE | LCD_1LINE | LCD_5x8DOTS;
 	begin(_cols, _rows);  
 }
@@ -229,6 +317,7 @@ void LiquidCrystal_I2C::backlight(void) {
 
 /*********** mid level commands, for sending data/cmds */
 
+__attribute__((always_inline)) 
 inline void LiquidCrystal_I2C::command(uint8_t value) {
 	send(value, 0);
 }
@@ -251,6 +340,9 @@ void LiquidCrystal_I2C::write4bits(uint8_t value) {
 
 void LiquidCrystal_I2C::expanderWrite(uint8_t _data){                                        
 	Wire.beginTransmission(_Addr);
+#ifdef LCD_I2C_LCDREG_ADDR				// register 0x03 on PCA9555, select output port
+	Wire.write((uint8_t)LCD_I2C_LCDREG_ADDR);	// select bits 8..15 on pca9555
+#endif	
 	printIIC((int)(_data) | _backlightval);
 	Wire.endTransmission();   
 }
