@@ -33,6 +33,7 @@
  *  - 0X38 is reserved for other sensors
  * If the respective drivers are not used, overrides allows to recover those addresses
  * If defined, USE_MCP230xx_ADDR is also always excluded
+ * If defined, USE_PCA9555_LCD_ADDR is also always excluded
  *
  * Mode 1:
  * See documentation.
@@ -79,7 +80,13 @@
 
 // PCF8574 address range from 0x20 to 0x26
 #ifndef PCF8574_ADDR1
+#ifdef USE_TIANMA_LCD_ON_PCA9555
+	#define PCF8574_ADDR1        0x21
+	#undef PCF8574_ADDR1_COUNT
+	#define PCF8574_ADDR1_COUNT  6
+#else
 #define PCF8574_ADDR1        0x20   // PCF8574
+#endif
 #endif
 #ifndef PCF8574_ADDR1_COUNT
 #define PCF8574_ADDR1_COUNT  7
@@ -634,6 +641,11 @@ void Pcf8574ModuleInit(void) {
   uint8_t pcf8574_address = (PCF8574_ADDR1_COUNT > 0) ? PCF8574_ADDR1 : PCF8574_ADDR2;
   while ((Pcf8574.max_devices < MAX_PCF8574) && (pcf8574_address < PCF8574_ADDR2 +PCF8574_ADDR2_COUNT)) {
 
+#if defined(USE_PCA9555_LCD) && defined(USE_PCA9555_LCD_ADDR)
+    if (USE_PCA9555_LCD_ADDR == pcf8574_address) {
+      AddLog(LOG_LEVEL_INFO, PSTR("PCF: Address 0x%02x reserved for USE_PCA9555_LCD"), pcf8574_address);
+    } else
+#endif
 #if defined(USE_MCP230xx) && defined(USE_MCP230xx_ADDR)
     if (USE_MCP230xx_ADDR == pcf8574_address) {
       AddLog(LOG_LEVEL_INFO, PSTR("PCF: Address 0x%02x reserved for MCP230xx"), pcf8574_address);

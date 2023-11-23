@@ -75,7 +75,11 @@
 #define XDRV_67                  67
 #define XI2C_77                  77       // See I2CDEVICES.md
 
-#define MCP23XXX_ADDR_START      0x20     // 32
+#if defined(USE_PCA9555_LCD) && defined(USE_PCA9555_LCD_ADDR)
+	#define MCP23XXX_ADDR_START      0x21     // 33
+#else
+	#define MCP23XXX_ADDR_START      0x20     // 32
+#endif
 #define MCP23XXX_ADDR_END        0x26     // 38
 
 #define MCP23XXX_MAX_DEVICES     6
