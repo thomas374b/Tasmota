@@ -37,7 +37,7 @@
 #endif
 
 
-#define 	BYTE_TIME  			((1000000UL * (1+8+1)) / VFDM_BAUDRATE)			// in µs
+#define 	BYTE_TIME  			((1000000UL * (1+8+1)) / VFDM_BAUDRATE)			// in Âµs
 #define		INTER_COMMAND_CHARS	10		// maybe we need more
 #define		INTER_CMD_DELAY		((INTER_COMMAND_CHARS * 1000000UL * (1+8+1)) / VFDM_BAUDRATE)
 
