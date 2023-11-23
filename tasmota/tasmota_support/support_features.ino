@@ -912,7 +912,9 @@ void ResponseAppendFeatures(void)
 #ifdef USE_HC8
     feature9 |= 0x10000000;  // xsns_113_hc8.ino
 #endif
-//    feature9 |= 0x20000000;
+#if defined(USE_DISPLAY) && defined(USE_DISPLAY_VFDM)
+    feature9 |= 0x20000000;  // xdsp_33_vfdm_serial.ino
+#endif
 //    feature9 |= 0x40000000;
 //    feature9 |= 0x80000000;
   }
