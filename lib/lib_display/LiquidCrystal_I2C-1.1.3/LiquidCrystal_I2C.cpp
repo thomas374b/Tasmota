@@ -36,6 +36,11 @@
 #endif	// assert missing pin definition
 
 #ifdef USE_LCD_PORT_BIT_MANGLING
+	// test if _BV() macro has been already defined
+	#ifndef _BV
+		#define	_BV(x)		(1 << (x))
+	#endif
+
 // standard sequence is RS, RW, ENA, spare/backlight, D4, D5, D6, D7
 // lookup array for fast and generic bit mangling
 static const uint8_t LCD_I2C_BITMASK[8] = {
@@ -70,6 +75,7 @@ inline uint8_t lcdBitMapping(uint8_t args)
 	
 	return data;
 }
+    #warning "bit mapping on LCD port enabled"
 #else
 	#define		lcdBitMapping(x)			(x)
 #endif // !USE_LCD_PORT_BIT_MANGLING
@@ -342,6 +348,7 @@ void LiquidCrystal_I2C::expanderWrite(uint8_t _data){
 	Wire.beginTransmission(_Addr);
 #ifdef LCD_I2C_LCDREG_ADDR				// register 0x03 on PCA9555, select output port
 	Wire.write((uint8_t)LCD_I2C_LCDREG_ADDR);	// select bits 8..15 on pca9555
+	#warning "using 16bit I2C expander"
 #endif	
 	printIIC((int)(_data) | _backlightval);
 	Wire.endTransmission();   

@@ -68,7 +68,7 @@
 		#define USE_PCA9555_LCD_ADDR	0x20	// no other options, hardcoded in PCB with via to GND layer
 	#endif
 
-	// i2c-gpio-expander layout
+    // i2c-gpio-expander layout
 	#define		LCD_I2C_KEYREG_ADDR	0x00		//	address of io0 register on pca9555 to read
 	#define		LCD_I2C_LCDREG_ADDR	0x03		//  address of io1 register on pca9555 to write
 	
@@ -85,16 +85,15 @@
 		#define	USE_LCD_PORT_BIT_MANGLING		// 	is a must on this device
 	#endif
 	
-	// test if _BV() macro has been already defined
-#ifndef _BV
-	#define	_BV(x)		(1 << (x))
-#endif
+
+/*
+
 	// buttons connections to i2c-gpio-expander
-	#define	 	LCD_KEY_BACK_MASK	_BV(0)		//	io0.0 on pca9555
-	#define	 	LCD_KEY_DOWN_MASK	_BV(1)		//	io0.1 on pca9555
-	#define	 	LCD_KEY_UP_MASK		_BV(2)		//	io0.2 on pca9555	
-	#define	 	LCD_KEY_ENTER_MASK	_BV(3)		//	io0.3 on pca9555
-	
+	#define	 	LCD_KEY_BACK_MASK	_bv(0)		//	io0.0 on pca9555
+	#define	 	LCD_KEY_DOWN_MASK	_bv(1)		//	io0.1 on pca9555
+	#define	 	LCD_KEY_UP_MASK		_bv(2)		//	io0.2 on pca9555
+	#define	 	LCD_KEY_ENTER_MASK	_bv(3)		//	io0.3 on pca9555
+*/
 	#undef LCD_I2C_HAS_BACKLIGHT			// backlight is always on, hardwired
 #endif // USE_TIANMA_LCD_ON_PCA9555
 
