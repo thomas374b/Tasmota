@@ -20,6 +20,14 @@
 	#ifndef USE_PCA9555
 		#define USE_PCA9555
 	#endif
+	#ifndef USE_PCA9555_LCD_ADDR
+		#define USE_PCA9555_LCD_ADDR	0x20	// no other options, hardcoded in PCB with via to GND layer
+	#endif
+    #warning "special restrictions apply to driver PCA9555"
+		// - address fixed to 0x20
+		// - only one device
+		// - only 4 buttin inputs @ pins 0..3
+		// - I2C LCD Display @ pins 8..15
 #endif
 #if defined(USE_PCA9555)
 /*********************************************************************************************\
@@ -443,6 +451,11 @@ void PCA9555ModuleInit(void) {
           PCA9555.device[PCA9555.chip].pins = 16;
           PCA9555Write(PCA9555_pol0_7, 0b00000000);     // disable polarity inversion
           PCA9555Write(PCA9555_pol8_15, 0b00000000);    // disable polarity inversion
+#ifdef USE_TIANMA_LCD_ON_PCA9555
+          if (PCA9555_address == USE_PCA9555_LCD_ADDR) {
+        	  PCA9555Write(PCA9555_dir8_15, 0b00000000);	// pins 8..15 are outputs
+          }
+#endif
           PCA9555.max_devices++;
 
           PCA9555.max_pins += PCA9555.device[PCA9555.chip].pins;
@@ -514,6 +527,11 @@ void PCA9555ServiceInput(void) {
 void PCA9555Init(void) {
   PCA9555Write(PCA9555_pol0_7, 0b00000000);     // disable polarity inversion
   PCA9555Write(PCA9555_pol8_15, 0b00000000);
+#ifdef USE_TIANMA_LCD_ON_PCA9555
+  if (PCA9555.device[PCA9555.chip].address == USE_PCA9555_LCD_ADDR) {
+	  PCA9555Write(PCA9555_dir8_15, 0b00000000);	// pins 8..15 are outputs
+  }
+#endif
 }
 
 #ifndef USE_TIANMA_LCD_ON_PCA9555

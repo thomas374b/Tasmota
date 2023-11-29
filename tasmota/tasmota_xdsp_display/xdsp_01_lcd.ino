@@ -30,11 +30,12 @@
 #define LCD_ADDRESS1           0x27         // LCD I2C address option 1
 #ifdef USE_TIANMA_LCD_ON_PCA9555
 	#if !defined(USE_LCD_PORT_BIT_MANGLING) || !defined(USE_PCA9555_LCD_ADDR)
-		#warning "you need a patched version of LiquidCrystal_I2C.h in order to support the TIANMA 16x2 LCD Display"
+		#error "you need a patched version of LiquidCrystal_I2C.h in order to support the TIANMA 16x2 LCD Display"
 	#else
+		#warning "using non-standard LCD_ADDRESS1"
+	#endif
 		#undef LCD_ADDRESS1
     	#define LCD_ADDRESS1       USE_PCA9555_LCD_ADDR
-	#endif
 #endif
 #define LCD_ADDRESS2           0x3F         // LCD I2C address option 2
 
