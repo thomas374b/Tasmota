@@ -52,6 +52,57 @@
 #define Rw B00000010  // Read/Write bit
 #define Rs B00000001  // Register select bit
 
+/* possible extra compiler definitions
+// #define  USE_TIANMA_LCD_ON_PCA9555		// mod to use this display
+// #define  LCD_I2C_PIN_BACKLIGHT			// define this a the pin number for the backlight control, default has backlight always on
+*/
+#ifdef USE_TIANMA_LCD_ON_PCA9555   // <== one must put this to the build environment
+								   // it's not sufficient in user_config_override.h
+	#ifndef USE_PCA9555
+		#define USE_PCA9555
+	#endif
+	#ifndef USE_PCA9555_LCD
+		#define USE_PCA9555_LCD
+	#endif
+	#ifndef USE_PCA9555_LCD_ADDR
+		#define USE_PCA9555_LCD_ADDR	0x20	// no other options, hardcoded in PCB with via to GND layer
+	#endif
+
+    // i2c-gpio-expander layout
+	#define		LCD_I2C_KEYREG_ADDR	0x00		//	address of io0 register on pca9555 to read
+	#define		LCD_I2C_LCDREG_ADDR	0x03		//  address of io1 register on pca9555 to write
+	
+	// pin connections from LCD to i2c-gpio-expander
+	#define		LCD_I2C_PIN_RS		7		//	io1.7 on pca9555
+	#define		LCD_I2C_PIN_RW		6		//	io1.6 on pca9555
+	#define		LCD_I2C_PIN_EN		5		//	io1.5 on pca9555
+	#define		LCD_I2C_PIN_D4		4		//	io1.4 on pca9555
+	#define		LCD_I2C_PIN_D5		3		//	io1.3 on pca9555
+	#define		LCD_I2C_PIN_D6		2		//	io1.2 on pca9555
+	#define		LCD_I2C_PIN_D7		1		//	io1.1 on pca9555
+	
+	#ifndef USE_LCD_PORT_BIT_MANGLING
+		#define	USE_LCD_PORT_BIT_MANGLING		// 	is a must on this device
+	#endif
+	
+
+/*
+
+	// buttons connections to i2c-gpio-expander
+	#define	 	LCD_KEY_BACK_MASK	_bv(0)		//	io0.0 on pca9555
+	#define	 	LCD_KEY_DOWN_MASK	_bv(1)		//	io0.1 on pca9555
+	#define	 	LCD_KEY_UP_MASK		_bv(2)		//	io0.2 on pca9555
+	#define	 	LCD_KEY_ENTER_MASK	_bv(3)		//	io0.3 on pca9555
+*/
+	#undef LCD_I2C_HAS_BACKLIGHT			// backlight is always on, hardwired
+#endif // USE_TIANMA_LCD_ON_PCA9555
+
+#if defined(LCD_I2C_PIN_BACKLIGHT)
+	#if (LCD_I2C_PIN_BACKLIGHT != -1)
+		#define		LCD_I2C_HAS_BACKLIGHT		1
+	#endif
+#endif
+
 class LiquidCrystal_I2C : public Print {
 public:
   LiquidCrystal_I2C(uint8_t lcd_Addr,uint8_t lcd_cols,uint8_t lcd_rows);
