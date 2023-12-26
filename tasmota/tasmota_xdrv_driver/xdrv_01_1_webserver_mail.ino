@@ -61,7 +61,7 @@ void MailWriteAddLogBuffer(String *buffer) {
 }
 
 void MailReadAddLogBuffer(String *buffer) {
-  AddLog(LOG_LEVEL_INFO, PSTR("MAI: < S: %s"), buffer->c_str());
+  AddLog(LOG_LEVEL_INFO, PSTR("MAI: < S(%d): [%s]"), buffer->length(), buffer->c_str());
 }
 #endif
 
@@ -132,13 +132,25 @@ bool SendEmail::send(const String& _from, const String& _to, const String& subje
   }
 
   String from, to;
-  from = ('<' == *_from.c_str()) ? _from : ("<" + _from + ">");
+  if (!_from.endsWith(">")) { // from may include a prefixed literal name
+	  from = ("<" + _from + ">");
+  } else {
+	  from = _from;
+  }
   to = ('<' == *_to.c_str()) ? _to : ("<" + _to +">");
 
   String buffer = readClient();
 #ifdef DEBUG_EMAIL_PORT
   MailReadAddLogBuffer(&buffer);
 #endif
+
+  if (buffer.isEmpty()) { // an empty line was read, this must not be an error
+	  buffer = readClient();
+#ifdef DEBUG_EMAIL_PORT
+	  MailReadAddLogBuffer(&buffer);
+#endif
+  }
+
   if (!buffer.startsWith(F("220"))) { return false; }
 
   buffer = F("EHLO ");
@@ -308,6 +320,8 @@ uint16_t SendMail(char *buffer) {
   oparams[blen] = 0;
   const char *cmd = endcmd +1;
 
+  char fromhost[80];
+
 #ifdef DEBUG_EMAIL_PORT
   AddLog(LOG_LEVEL_INFO, PSTR("MAI: Size: %d"), blen);
 #endif
@@ -333,9 +347,15 @@ uint16_t SendMail(char *buffer) {
             if (to) {
               const char *subject = strtok(NULL, "]");
               if (subject) {
+#ifdef EMAIL_USER_DOMAIN
+#ifdef EMAIL_USER
+                if (*user == '*') { user = xPSTR(EMAIL_USER "@" EMAIL_USER_DOMAIN); }
+#endif
+#else
 #ifdef EMAIL_USER
                 if (*user == '*') { user = xPSTR(EMAIL_USER); }
 #endif
+#endif // EMAIL_USER_DOMAIN
 #ifdef EMAIL_PASSWORD
                 if (*passwd == '*') { passwd = xPSTR(EMAIL_PASSWORD); }
 #endif
@@ -346,10 +366,10 @@ uint16_t SendMail(char *buffer) {
 #ifdef DEBUG_EMAIL_PORT
                 AddLog(LOG_LEVEL_INFO, PSTR("MAI: %s, %d, %s, %s"), mserv, port, user, passwd);
 #endif
-
-#ifdef EMAIL_FROM
-                if (*from == '*') { from = xPSTR(EMAIL_FROM); }
-#endif
+                if (*from == '*') {
+                	snprintf(fromhost, 79, "%s <" EMAIL_USER "@" EMAIL_USER_DOMAIN ">", SettingsText(SET_DEVICENAME) );
+                	from = fromhost;
+                }
 
 #ifdef DEBUG_EMAIL_PORT
                 AddLog(LOG_LEVEL_INFO, PSTR("MAI: %s, %s, %s, %s"), from, to, subject, cmd);

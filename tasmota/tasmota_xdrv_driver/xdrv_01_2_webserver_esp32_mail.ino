@@ -148,6 +148,8 @@ uint16_t SendMail(char *buffer) {
     if (oparams) { free(oparams); }
     return 4;
   }
+  char fromUser[64];
+  char msgId[80];
 
   const char *mserv = strtok(params, ":");
   if (mserv) {
@@ -170,6 +172,20 @@ uint16_t SendMail(char *buffer) {
             if (to) {
               const char *subject = strtok(NULL, "]");
               if (subject) {
+
+#ifdef EMAIL_USER_DOMAIN
+#ifdef EMAIL_USER
+                if (*user == '*') { user = xPSTR(EMAIL_USER "@" EMAIL_USER_DOMAIN); }
+#endif
+#ifdef EMAIL_PASSWORD
+                if (*passwd == '*') { passwd = xPSTR(EMAIL_PASSWORD); }
+#endif
+#ifdef EMAIL_SERVER
+                if (*mserv == '*') { mserv = xPSTR(EMAIL_SERVER); }
+#else
+                if (*mserv == '*') { mserv = xPSTR("smtp." EMAIL_USER_DOMAIN); }
+#endif
+#else
 #ifdef EMAIL_USER
                 if (*user == '*') { user = xPSTR(EMAIL_USER); }
 #endif
@@ -179,14 +195,16 @@ uint16_t SendMail(char *buffer) {
 #ifdef EMAIL_SERVER
                 if (*mserv == '*') { mserv = xPSTR(EMAIL_SERVER); }
 #endif
+#endif
 
 #ifdef DEBUG_EMAIL_PORT
                 AddLog(LOG_LEVEL_INFO, PSTR("MAI: %s, %d, %s, %s"), mserv, port, user, passwd);
 #endif
 
-#ifdef EMAIL_FROM
-                if (*from == '*') { from = xPSTR(EMAIL_FROM); }
-#endif
+                if (*from == '*') {
+                	snprintf(fromUser, 63, "%s <" EMAIL_USER "@" EMAIL_USER_DOMAIN ">", SettingsText(SET_DEVICENAME) );
+                	from = fromUser;
+                }
 
 #ifdef DEBUG_EMAIL_PORT
                 AddLog(LOG_LEVEL_INFO, PSTR("MAI: %s, %s, %s, %s"), from, to, subject, cmd);
@@ -211,8 +229,11 @@ uint16_t SendMail(char *buffer) {
                 session.server.port = port;
                 session.login.email = user;
                 session.login.password = passwd;
-                session.login.user_domain = "googlemail.com";
-
+#ifndef EMAIL_USER_DOMAIN
+	#define EMAIL_USER_DOMAIN    "googlemail.com"
+    #warning  "using <googlemail.com> as email-user-domain"
+#endif
+                session.login.user_domain = EMAIL_USER_DOMAIN;
                 message.enable.chunking = true;
                 char sname[32];
                 strlcpy(sname, SettingsText(SET_FRIENDLYNAME1), sizeof(sname));
@@ -228,7 +249,8 @@ uint16_t SendMail(char *buffer) {
                 message.response.notify = esp_mail_smtp_notify_failure;
                 message.html.charSet = "us-ascii";
                 message.html.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
-                message.addHeader("Message-ID: <user1@gmail.com>");
+                strnprintf(msgId,79,"Message-ID: %s", from);
+                message.addHeader(msgId);
 
 /*-------------------------------------------------------------------------------------------*/
 

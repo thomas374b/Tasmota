@@ -9145,7 +9145,10 @@ bool Script_SubCmd(void) {
   if (tasm_cmd_activ) return false;
   //AddLog(LOG_LEVEL_INFO,PSTR(">> %s, %s, %d, %d "),XdrvMailbox.topic, XdrvMailbox.data, XdrvMailbox.payload, XdrvMailbox.index);
 
-  char command[CMDSZ];
+  char command[CMDSZ+4];
+  memset(command, 0, CMDSZ+4);
+  //avoid writing to the last char, keep it zero-terminated for strlen() not to run over the end
+
   strlcpy(command, XdrvMailbox.topic, CMDSZ);
   if (XdrvMailbox.index > 1) {
     char ind[2];
@@ -9156,22 +9159,23 @@ bool Script_SubCmd(void) {
 
   int32_t pl = XdrvMailbox.payload;
 
-  char cmdbuff[128];
+  char cmdbuff[256];
   char *cp = cmdbuff;
   *cp++ = '#';
-  strcpy(cp, command);
   uint8_t tlen = strlen(command);
+  strncpy(cp, command, CMDSZ);
   cp += tlen;
   if (XdrvMailbox.data_len > 0) {
     *cp++ = '(';
-    strncpy(cp, XdrvMailbox.data,XdrvMailbox.data_len);
-    cp += XdrvMailbox.data_len;
+    uint32_t max_space = sizeof(cmdbuff) - tlen - 4;  // 4 = #()0
+    uint32_t max_len = min(XdrvMailbox.data_len, max_space);
+    strncpy(cp, XdrvMailbox.data, max_len);
+    cp += max_len;
     *cp++ = ')';
     *cp = 0;
   }
   //toLog(cmdbuff);
   uint32_t res = Run_Scripter1(cmdbuff, tlen + 1, 0);
-  //AddLog(LOG_LEVEL_INFO,">>%d",res);
   if (res) {
     return false;
   }
@@ -9260,7 +9264,7 @@ uint32_t options = 0;
 #ifdef USE_SCRIPT_I2C
   options |= 0x00400000;
 #endif
-#ifdef USE_DSIPLAY_DUMP
+#ifdef USE_DISPLAY_DUMP
   options |= 0x00800000;
 #endif
 #ifdef USE_SCRIPT_SERIAL
