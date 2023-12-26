@@ -9156,11 +9156,14 @@ bool Script_SubCmd(void) {
 
   int32_t pl = XdrvMailbox.payload;
 
-  char cmdbuff[128];
+  char cmdbuff[256];
   char *cp = cmdbuff;
   *cp++ = '#';
-  strcpy(cp, command);
   uint8_t tlen = strlen(command);
+  if (tlen > 250) {
+	  AddLog(LOG_LEVEL_ERROR, PSTR("string truncated, expecting further errors @ %s:%d"), __FILE__, __LINE__);
+  }
+  strncpy(cp, command, 250);
   cp += tlen;
   if (XdrvMailbox.data_len > 0) {
     *cp++ = '(';
@@ -9171,7 +9174,6 @@ bool Script_SubCmd(void) {
   }
   //toLog(cmdbuff);
   uint32_t res = Run_Scripter1(cmdbuff, tlen + 1, 0);
-  //AddLog(LOG_LEVEL_INFO,">>%d",res);
   if (res) {
     return false;
   }
@@ -9260,7 +9262,7 @@ uint32_t options = 0;
 #ifdef USE_SCRIPT_I2C
   options |= 0x00400000;
 #endif
-#ifdef USE_DSIPLAY_DUMP
+#ifdef USE_DISPLAY_DUMP
   options |= 0x00800000;
 #endif
 #ifdef USE_SCRIPT_SERIAL
