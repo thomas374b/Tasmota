@@ -9145,7 +9145,10 @@ bool Script_SubCmd(void) {
   if (tasm_cmd_activ) return false;
   //AddLog(LOG_LEVEL_INFO,PSTR(">> %s, %s, %d, %d "),XdrvMailbox.topic, XdrvMailbox.data, XdrvMailbox.payload, XdrvMailbox.index);
 
-  char command[CMDSZ];
+  char command[CMDSZ+4];
+  memset(command, 0, CMDSZ+4);
+  //avoid writing to the last char, keep it zero-terminated for strlen() not to run over the end
+
   strlcpy(command, XdrvMailbox.topic, CMDSZ);
   if (XdrvMailbox.index > 1) {
     char ind[2];
@@ -9160,15 +9163,14 @@ bool Script_SubCmd(void) {
   char *cp = cmdbuff;
   *cp++ = '#';
   uint8_t tlen = strlen(command);
-  if (tlen > 250) {
-	  AddLog(LOG_LEVEL_ERROR, PSTR("string truncated, expecting further errors @ %s:%d"), __FILE__, __LINE__);
-  }
-  strncpy(cp, command, 250);
+  strncpy(cp, command, CMDSZ);
   cp += tlen;
   if (XdrvMailbox.data_len > 0) {
     *cp++ = '(';
-    strncpy(cp, XdrvMailbox.data,XdrvMailbox.data_len);
-    cp += XdrvMailbox.data_len;
+    uint32_t max_space = sizeof(cmdbuff) - tlen - 4;  // 4 = #()0
+    uint32_t max_len = min(XdrvMailbox.data_len, max_space);
+    strncpy(cp, XdrvMailbox.data, max_len);
+    cp += max_len;
     *cp++ = ')';
     *cp = 0;
   }
