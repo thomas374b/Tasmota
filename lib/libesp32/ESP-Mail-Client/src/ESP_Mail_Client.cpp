@@ -866,6 +866,15 @@ void ESP_Mail_Client::appendString(MB_String &buf, PGM_P value, bool comma, bool
   if (comma)
     buf += esp_mail_str_8; /* "," */
 
+  if (value) {
+	  if (type == esp_mail_string_mark_type_angle_bracket) {
+		  if (strrchr(value,'>') != NULL) {
+			  // skip surrounding with angle brackets if already done
+			  type = esp_mail_string_mark_type_none;
+		  }
+	  }
+  }
+
   switch (type)
   {
   case esp_mail_string_mark_type_double_quote:

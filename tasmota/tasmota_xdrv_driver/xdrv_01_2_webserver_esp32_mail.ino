@@ -249,7 +249,7 @@ uint16_t SendMail(char *buffer) {
                 message.response.notify = esp_mail_smtp_notify_failure;
                 message.html.charSet = "us-ascii";
                 message.html.transfer_encoding = Content_Transfer_Encoding::enc_7bit;
-                strnprintf(msgId,79,"Message-ID: %s", from);
+                snprintf(msgId,79,"Message-ID: %s", from);
                 message.addHeader(msgId);
 
 /*-------------------------------------------------------------------------------------------*/
