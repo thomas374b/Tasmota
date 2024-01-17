@@ -349,7 +349,7 @@ uint16_t AdcRead(uint32_t pin, uint32_t factor) {
   return analog;
 }
 
-#ifdef USE_RULES
+#if defined(USE_RULES) || defined(USE_SCRIPT)
 void AdcEvery250ms(void) {
   char adc_idx[3] = { 0 };
   uint32_t offset = 0;
@@ -373,6 +373,16 @@ void AdcEvery250ms(void) {
         Adc[idx].last_value = new_value;
         uint16_t value = new_value / Adc[idx].param1;
         Response_P(PSTR("{\"ANALOG\":{\"Joy%s\":%d}}"), adc_idx, value);
+        XdrvRulesProcess(0);
+      } else {
+        Adc[idx].last_value = 0;
+      }
+    }
+    else if (ADC_LIGHT == Adc[idx].type) {
+      uint16_t new_value = AdcGetLux(idx);
+      if (new_value && (new_value != Adc[idx].last_value)) {
+        Adc[idx].last_value = new_value;
+        Response_P(PSTR("{\"ANALOG\":{\"" D_JSON_ILLUMINANCE "%s\":%d}}"), adc_idx, new_value);
         XdrvRulesProcess(0);
       } else {
         Adc[idx].last_value = 0;
@@ -888,7 +898,7 @@ bool Xsns02(uint32_t function) {
     default:
       if (Adcs.present) {
         switch (function) {
-#ifdef USE_RULES
+#if defined(USE_RULES) || defined(USE_SCRIPT)
           case FUNC_EVERY_250_MSECOND:
             AdcEvery250ms();
             break;
